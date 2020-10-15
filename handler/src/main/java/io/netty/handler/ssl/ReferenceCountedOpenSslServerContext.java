@@ -23,6 +23,7 @@ import io.netty.internal.tcnative.SniHostNameMatcher;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -51,6 +52,9 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
 
+    private static final boolean ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.server.enableSessionTicketExtension", false);
+
     ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
@@ -75,6 +79,9 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                       keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
+            if (ENABLE_SESSION_TICKET) {
+                sessionContext.setTicketKeys();
+            }
             success = true;
         } finally {
             if (!success) {
@@ -221,8 +228,12 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 // OpenJDK SSLEngineImpl does.
                 keyManagerHolder.setKeyMaterialServerSide(engine);
             } catch (Throwable cause) {
-                logger.debug("Failed to set the server-side key material", cause);
                 engine.initHandshakeException(cause);
+
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new SSLException(cause);
             }
         }
     }

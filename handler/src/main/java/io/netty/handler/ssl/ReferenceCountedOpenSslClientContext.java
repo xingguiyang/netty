@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.internal.tcnative.SSL;
@@ -56,6 +57,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                           OpenSslKeyMaterialManager.KEY_TYPE_EC,
                           OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
                           OpenSslKeyMaterialManager.KEY_TYPE_EC_EC)));
+    private static final boolean ENABLE_SESSION_TICKET =
+            SystemPropertyUtil.getBoolean("jdk.tls.client.enableSessionTicketExtension", false);
     private final OpenSslSessionContext sessionContext;
 
     ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -164,6 +167,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 throw new SSLException("unable to setup trustmanager", e);
             }
             OpenSslClientSessionContext context = new OpenSslClientSessionContext(thiz, keyMaterialProvider);
+            if (ENABLE_SESSION_TICKET) {
+                context.setTicketKeys();
+            }
             keyMaterialProvider = null;
             return context;
         } finally {
@@ -286,8 +292,11 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 }
                 keyManagerHolder.setKeyMaterialClientSide(engine, keyTypes, issuers);
             } catch (Throwable cause) {
-                logger.debug("request of key failed", cause);
                 engine.initHandshakeException(cause);
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new SSLException(cause);
             }
         }
 

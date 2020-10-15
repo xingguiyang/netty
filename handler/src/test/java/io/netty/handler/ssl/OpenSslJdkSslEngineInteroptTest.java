@@ -45,7 +45,7 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, false});
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, true });
 
-            if (PlatformDependent.javaVersion() >= 11 && OpenSsl.isTlsv13Supported()) {
+            if (SslProvider.isTlsv13Supported(SslProvider.JDK) && SslProvider.isTlsv13Supported(SslProvider.OPENSSL)) {
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false, false });
                 params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false, true });
 
@@ -134,6 +134,13 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     public void testSupportedSignatureAlgorithms() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSupportedSignatureAlgorithms();
+    }
+
+    @Override
+    @Test
+    public void testSessionLocalWhenNonMutualWithKeyManager() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionLocalWhenNonMutualWithKeyManager();
     }
 
     @Override
