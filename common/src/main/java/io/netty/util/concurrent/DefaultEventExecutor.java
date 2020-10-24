@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * Default {@link SingleThreadEventExecutor} implementation which just execute all submitted task in a
  * serial fashion.
+ * 默认 SingleThreadEventExecutor 执行以串行方式提交的所有任务。
  */
 public final class DefaultEventExecutor extends SingleThreadEventExecutor {
 

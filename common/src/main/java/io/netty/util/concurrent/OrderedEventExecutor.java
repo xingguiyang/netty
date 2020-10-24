@@ -17,6 +17,7 @@ package io.netty.util.concurrent;
 
 /**
  * Marker interface for {@link EventExecutor}s that will process all submitted tasks in an ordered / serial fashion.
+ * EventExecutor的标记接口，将以有序、串行方式处理所有提交的任务。
  */
 public interface OrderedEventExecutor extends EventExecutor {
 }

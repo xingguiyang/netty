@@ -53,6 +53,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
         return parent;
     }
 
+    // 自己给自己排任务,该抽象接口中的模板实现是永远指向自己
     @Override
     public EventExecutor next() {
         return this;
@@ -110,6 +111,7 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
         return new FailedFuture<V>(this, cause);
     }
 
+    // 提交任务给谁？给自己
     @Override
     public Future<?> submit(Runnable task) {
         return (Future<?>) super.submit(task);

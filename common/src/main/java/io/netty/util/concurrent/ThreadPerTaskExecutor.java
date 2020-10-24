@@ -27,6 +27,7 @@ public final class ThreadPerTaskExecutor implements Executor {
         this.threadFactory = ObjectUtil.checkNotNull(threadFactory, "threadFactory");
     }
 
+    // 来一个任务，起一个线程执行
     @Override
     public void execute(Runnable command) {
         threadFactory.newThread(command).start();
