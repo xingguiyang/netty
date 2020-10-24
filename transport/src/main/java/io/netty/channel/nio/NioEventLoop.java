@@ -640,14 +640,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void processSelectedKeysOptimized() {
         for (int i = 0; i < selectedKeys.size; ++i) {
             final SelectionKey k = selectedKeys.keys[i];
-            // null out entry in the array to allow to have it GC'ed once the Channel close
-            // See https://github.com/netty/netty/issues/2363
+            // 数组中的空节点允许通道关闭后对其进行GC处理
+            // 在SelectedSelectionKeySet中使用单数组
+            // 动机:SelectedSelectionKeySet当前在内部使用2个数组，并且期望用户调用flip（）来访问基础数组并切换活动数组。
+            // 但是，我们不能同时使用2个数组，如果在重置数组元素时格外小心，就可以摆脱使用单数组。
+            // 修改: 介绍包装了Selector的SelectedSelectionKeySetSelector并确保我们在选择之前重置基础的SelectedSelectionKeySet数据结构-
+            // NioEventLoop＃processSelectedKeysOptimized中的循环边界可以更精确地定义，因为我们知道基础数组的实际大小
             selectedKeys.keys[i] = null;
 
             final Object a = k.attachment();
 
             if (a instanceof AbstractNioChannel) {
-                processSelectedKey(k, (AbstractNioChannel) a);
+                        processSelectedKey(k, (AbstractNioChannel) a);
             } else {
                 @SuppressWarnings("unchecked")
                 NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
