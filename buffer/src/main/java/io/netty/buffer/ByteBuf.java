@@ -35,10 +35,12 @@ import java.nio.charset.UnsupportedCharsetException;
  * arrays ({@code byte[]}) and {@linkplain ByteBuffer NIO buffers}.
  *
  * <h3>Creation of a buffer</h3>
+ * 缓冲区的创建
  *
  * It is recommended to create a new buffer using the helper methods in
  * {@link Unpooled} rather than calling an individual implementation's
  * constructor.
+ * 推荐使用 Unpooled 中的辅助方法创建一个新缓冲区，而不是调用单个实现的构造器。
  *
  * <h3>Random Access Indexing</h3>
  *
@@ -47,6 +49,10 @@ import java.nio.charset.UnsupportedCharsetException;
  * It means the index of the first byte is always {@code 0} and the index of the last byte is
  * always {@link #capacity() capacity - 1}.  For example, to iterate all bytes of a buffer, you
  * can do the following, regardless of its internal implementation:
+ * 就像普通的原始字节数组一样，ByteBuf}使用基于零的索引。
+ * 这意味着第一个字节的索引始终为{@code 0}，
+ * 而最后一个字节的索引始终为{@link #capacity（）capacity-1}。
+ * 例如，要迭代缓冲区的所有字节，无论内部实现如何，*都可以执行以下操作：
  *
  * <pre>
  * {@link ByteBuf} buffer = ...;
@@ -57,12 +63,16 @@ import java.nio.charset.UnsupportedCharsetException;
  * </pre>
  *
  * <h3>Sequential Access Indexing</h3>
+ * 串行访问索引
  *
  * {@link ByteBuf} provides two pointer variables to support sequential
  * read and write operations - {@link #readerIndex() readerIndex} for a read
  * operation and {@link #writerIndex() writerIndex} for a write operation
  * respectively.  The following diagram shows how a buffer is segmented into
  * three areas by the two pointers:
+ * ByteBuf 提供了两个指针变量来支持顺序的读写操作-
+ * readerIndex用于读取操作，writerIndex用于写入操作
+ * 下图显示了如何通过两个指针将缓冲区划分为三个区域：
  *
  * <pre>
  *      +-------------------+------------------+------------------+
@@ -74,6 +84,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * </pre>
  *
  * <h4>Readable bytes (the actual content)</h4>
+ * 可读字节（实际内容）
  *
  * This segment is where the actual data is stored.  Any operation whose name
  * starts with {@code read} or {@code skip} will get or skip the data at the
@@ -85,10 +96,15 @@ import java.nio.charset.UnsupportedCharsetException;
  * If there's not enough content left, {@link IndexOutOfBoundsException} is
  * raised.  The default value of newly allocated, wrapped or copied buffer's
  * {@link #readerIndex() readerIndex} is {@code 0}.
+ * 该段是实际数据的存储位置。名称以“read”或“skip”开头的任何操作都将获取或跳过当前readerIndex处的数据，并将其增加读取字节数。
+ * 如果读取操作的参数也是ByteBuf并且未指定目标索引，则指定缓冲区的writerIndex会一起增加。
+ * 如果没有足够的内容剩余，则会引发IndexOutOfBoundsException。新分配，包装或复制的缓冲区的readerIndex的默认值为0。
  *
  * <pre>
  * // Iterates the readable bytes of a buffer.
+ * 迭代缓冲区的可读字节。
  * {@link ByteBuf} buffer = ...;
+ * isReadable 阻塞式方法,因其若为非阻塞，则 while 一直为 true
  * while (buffer.isReadable()) {
  *     System.out.println(buffer.readByte());
  * }
@@ -103,11 +119,15 @@ import java.nio.charset.UnsupportedCharsetException;
  * and no source index is specified, the specified buffer's
  * {@link #readerIndex() readerIndex} is increased together.
  * <p>
+ * 该段是未定义的空间，需要填充。名称以write开头的任何操作都将在当前writerIndex处写入数据，并将其增加写入字节数。
+ * 如果写操作的参数也是ByteBuf，并且未指定源索引，则指定缓冲区的readerIndex会一起增加。
  * If there's not enough writable bytes left, {@link IndexOutOfBoundsException}
  * is raised.  The default value of newly allocated buffer's
  * {@link #writerIndex() writerIndex} is {@code 0}.  The default value of
  * wrapped or copied buffer's {@link #writerIndex() writerIndex} is the
  * {@link #capacity() capacity} of the buffer.
+ * 如果剩余的可写字节不足，则会引发IndexOutOfBoundsException。
+ * 新分配的缓冲区的writerIndex的默认值为0。包装或复制的缓冲区的writerIndex的默认值为缓冲区的容量。
  *
  * <pre>
  * // Fills the writable bytes of a buffer with random integers.
@@ -124,6 +144,10 @@ import java.nio.charset.UnsupportedCharsetException;
  * to the {@link #writerIndex() writerIndex} as read operations are executed.
  * The read bytes can be discarded by calling {@link #discardReadBytes()} to
  * reclaim unused area as depicted by the following diagram:
+ * 该段包含已由读取操作读取的字节。
+ * 此段的初始大小为0，但随执行读取操作，其大小增加到writerIndex。
+ * 可调用 discardReadBytes 回收读取的字节，
+ * 如下图所示：
  *
  * <pre>
  *  BEFORE discardReadBytes()
@@ -148,7 +172,8 @@ import java.nio.charset.UnsupportedCharsetException;
  * after calling {@link #discardReadBytes()}.  The writable bytes will not be
  * moved in most cases and could even be filled with completely different data
  * depending on the underlying buffer implementation.
- *
+ * 请注意，调用discardReadBytes后，无法保证可写字节的内容。
+ * 在大多数情况下，可写字节将不会移动，甚至可能会根据基础缓冲区的实现而用完全不同的数据填充。
  * <h4>Clearing the buffer indexes</h4>
  *
  * You can set both {@link #readerIndex() readerIndex} and

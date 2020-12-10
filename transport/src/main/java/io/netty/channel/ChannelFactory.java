@@ -22,6 +22,7 @@ package io.netty.channel;
 public interface ChannelFactory<T extends Channel> extends io.netty.bootstrap.ChannelFactory<T> {
     /**
      * Creates a new channel.
+     * 泛型代表不同的 channel
      */
     @Override
     T newChannel();
