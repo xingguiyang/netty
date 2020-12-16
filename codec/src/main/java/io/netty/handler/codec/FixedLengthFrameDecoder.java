@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import java.util.List;
 
 /**
+ * 固定长度
  * A decoder that splits the received {@link ByteBuf}s by the fixed number
  * of bytes. For example, if you received the following four fragmented packets:
  * <pre>
@@ -40,10 +41,13 @@ import java.util.List;
  */
 public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
 
+    /**
+     * 只有固定的帧长度属性
+     */
     private final int frameLength;
 
     /**
-     * Creates a new instance.
+     * 创建新实例
      *
      * @param frameLength the length of the frame
      */
@@ -64,15 +68,18 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
      * Create a frame out of the {@link ByteBuf} and return it.
      *
      * @param   ctx             the {@link ChannelHandlerContext} which this {@link ByteToMessageDecoder} belongs to
-     * @param   in              the {@link ByteBuf} from which to read data
+     * @param   in              the {@link ByteBuf} from which to read data 接收到的数据
      * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                          be created.
      */
     protected Object decode(
             @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        // 判断当前累加器里的字节是否小于frameLength
         if (in.readableBytes() < frameLength) {
+            // 小了，也解析不出数据，直接返回 null
             return null;
         } else {
+            // 可以解析出数据
             return in.readRetainedSlice(frameLength);
         }
     }

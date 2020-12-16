@@ -96,9 +96,12 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      *                          be created.
      */
     protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        // 定位行尾
         final int eol = findEndOfLine(buffer);
+        // 非丢弃模式
         if (!discarding) {
             if (eol >= 0) {
+                // 找到换行符
                 final ByteBuf frame;
                 final int length = eol - buffer.readerIndex();
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
@@ -118,12 +121,17 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
 
                 return frame;
             } else {
+                // 找不到换行符
                 final int length = buffer.readableBytes();
+                // 解析出长度超过最大可解析长度
                 if (length > maxLength) {
                     discardedBytes = length;
                     buffer.readerIndex(buffer.writerIndex());
+                    // 直接进入丢弃模式
                     discarding = true;
+                    // 读指针移到写指针位,即丢弃
                     offset = 0;
+                    // 并传播异常
                     if (failFast) {
                         fail(ctx, "over " + discardedBytes);
                     }
@@ -131,19 +139,30 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                 return null;
             }
         } else {
+            // 丢弃模式
             if (eol >= 0) {
+                // ======== 找到换行符 ========
+                // 记录当前丢弃了多少字节(已丢弃 + 本次将丢弃的)
                 final int length = discardedBytes + eol - buffer.readerIndex();
+                // 锁定换行符类型
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
+                // 将读指针直接移到换行符后
                 buffer.readerIndex(eol + delimLength);
+                // 丢弃字节置零
                 discardedBytes = 0;
+                // 重置为非丢弃状态
                 discarding = false;
+                // 所有字节丢弃后才触发快速失败机制
                 if (!failFast) {
                     fail(ctx, length);
                 }
             } else {
+                // ======== 找不到换行符 ========
+                // 直接记录当前丢弃字节(已丢弃 + 当前可读字节数)
                 discardedBytes += buffer.readableBytes();
+                // 将读指针直接移到写指针
                 buffer.readerIndex(buffer.writerIndex());
-                // We skip everything in the buffer, we need to set the offset to 0 again.
+                // 跳过缓冲区中的所有内容，需再次将offset设为0
                 offset = 0;
             }
             return null;
@@ -161,8 +180,8 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * Returns the index in the buffer of the end of line found.
-     * Returns -1 if no end of line was found in the buffer.
+     * 返回找到的行尾缓冲区中的索引。
+     * 如果在缓冲区中未找到行尾，则返回-1
      */
     private int findEndOfLine(final ByteBuf buffer) {
         int totalLength = buffer.readableBytes();

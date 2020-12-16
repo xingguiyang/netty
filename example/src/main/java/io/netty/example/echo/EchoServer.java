@@ -60,7 +60,7 @@ public final class EchoServer {
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, 100)
                     .handler(new LoggingHandler(LogLevel.INFO))
-                    // 设置 keepalive 的两种风格
+                    // 设置 keep-alive 的两种风格
                     .childOption(ChannelOption.SO_KEEPALIVE,true)
                     .childOption(NioChannelOption.SO_KEEPALIVE,true)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
