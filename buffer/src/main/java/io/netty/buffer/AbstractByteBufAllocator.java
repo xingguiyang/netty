@@ -104,6 +104,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     @Override
     public ByteBuf buffer() {
         if (directByDefault) {
+            // 如果是directByDefault则使用堆外内存
             return directBuffer();
         }
         return heapBuffer();

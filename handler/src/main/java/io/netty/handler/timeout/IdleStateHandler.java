@@ -413,12 +413,23 @@ public class IdleStateHandler extends ChannelDuplexHandler {
      */
     private boolean hasOutputChanged(ChannelHandlerContext ctx, boolean first) {
         if (observeOutput) {
+            /**
+             * 正常情况下，false, 即写空闲的判断中的写是指写成功，但实际上有可能遇到如下情况:
+             * (1)写了,但缓存区满了,写不出去
+             * (2)写了个大“数据”,写确实在“动”,但没有完成
+             * 所以该参数是判断是否有“写的意图”而不是判断“是否写成功”
+             */
 
             // We can take this shortcut if the ChannelPromises that got passed into write()
             // appear to complete. It indicates "change" on message level and we simply assume
             // that there's change happening on byte level. If the user doesn't observe channel
             // writability events then they'll eventually OOME and there's clearly a different
             // problem and idleness is least of their concerns.
+            // 如果传递给 write 的ChannelPromises似乎完成，则可以采用此快捷方式。
+            // 它表示消息级别上的“更改”，我们仅假设//字节级别上发生了更改。
+            // 如果用户不观察频道//的可写性事件，那么他们最终将还是OOM，
+            // 显然存在一个不同的问题，闲置是他们最不关心的问题。
+
             if (lastChangeCheckTimeStamp != lastWriteTime) {
                 lastChangeCheckTimeStamp = lastWriteTime;
 
@@ -445,6 +456,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                     }
                 }
 
+                // 写的进度
                 long flushProgress = buf.currentProgress();
                 if (flushProgress != lastFlushProgress) {
                     lastFlushProgress = flushProgress;
@@ -489,11 +501,12 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         protected void run(ChannelHandlerContext ctx) {
             long nextDelay = readerIdleTimeNanos;
             if (!reading) {
+                // 计算是否 idle 的关键
                 nextDelay -= ticksInNanos() - lastReadTime;
             }
 
             if (nextDelay <= 0) {
-                // Reader is idle - set a new timeout and notify the callback.
+                // Reader空闲 - 设置新的超时并通知回调
                 readerIdleTimeout = schedule(ctx, this, readerIdleTimeNanos, TimeUnit.NANOSECONDS);
 
                 boolean first = firstReaderIdleEvent;
@@ -506,7 +519,8 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                     ctx.fireExceptionCaught(t);
                 }
             } else {
-                // Read occurred before the timeout - set a new timeout with shorter delay.
+                // 重新起一个监测 task，用 nextdelay 时间
+                // 读取发生在超时前 - 设置具有更短延迟的新超时
                 readerIdleTimeout = schedule(ctx, this, nextDelay, TimeUnit.NANOSECONDS);
             }
         }

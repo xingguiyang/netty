@@ -197,6 +197,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
 
         @Override
         public void run() {
+            // 这是判断有无写成功，而不是是否超时!
             // Was not written yet so issue a write timeout
             // The promise itself will be failed with a ClosedChannelException once the close() was issued
             // See https://github.com/netty/netty/issues/2159

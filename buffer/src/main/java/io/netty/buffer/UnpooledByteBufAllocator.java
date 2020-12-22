@@ -89,6 +89,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         final ByteBuf buf;
         if (PlatformDependent.hasUnsafe()) {
             buf = noCleaner ? new InstrumentedUnpooledUnsafeNoCleanerDirectByteBuf(this, initialCapacity, maxCapacity) :
+                    // 大部分场景是这个，即有 unsafe 和 cleaner
                     new InstrumentedUnpooledUnsafeDirectByteBuf(this, initialCapacity, maxCapacity);
         } else {
             buf = new InstrumentedUnpooledDirectByteBuf(this, initialCapacity, maxCapacity);

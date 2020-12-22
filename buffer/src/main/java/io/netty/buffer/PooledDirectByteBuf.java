@@ -28,13 +28,9 @@ import java.nio.ByteBuffer;
 final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     private static final ObjectPool<PooledDirectByteBuf> RECYCLER = ObjectPool.newPool(
-            new ObjectCreator<PooledDirectByteBuf>() {
-        @Override
-        public PooledDirectByteBuf newObject(Handle<PooledDirectByteBuf> handle) {
-            return new PooledDirectByteBuf(handle, 0);
-        }
-    });
+            handle -> new PooledDirectByteBuf(handle, 0));
 
+    // 从池里借一个用
     static PooledDirectByteBuf newInstance(int maxCapacity) {
         PooledDirectByteBuf buf = RECYCLER.get();
         buf.reuse(maxCapacity);

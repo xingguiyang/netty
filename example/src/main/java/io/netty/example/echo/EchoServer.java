@@ -16,6 +16,8 @@
 package io.netty.example.echo;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -61,8 +63,13 @@ public final class EchoServer {
                     .option(ChannelOption.SO_BACKLOG, 100)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     // 设置 keep-alive 的两种风格
-                    .childOption(ChannelOption.SO_KEEPALIVE,true)
-                    .childOption(NioChannelOption.SO_KEEPALIVE,true)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .childOption(NioChannelOption.SO_KEEPALIVE, true)
+                    // 切换到Unpooled的方式一
+//                    .childOption(ChannelOption.ALLOCATOR, UnpooledByteBufAllocator.DEFAULT)
+                    // 切换使用堆内/外内存
+                    .childOption(ChannelOption.ALLOCATOR, new PooledByteBufAllocator(false))
+
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
@@ -75,10 +82,10 @@ public final class EchoServer {
                         }
                     });
 
-            // Start the server.
+            // 启动 server.
             ChannelFuture f = b.bind(PORT).sync();
 
-            // Wait until the server socket is closed.
+            // 等待直至 server socket 关闭
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.

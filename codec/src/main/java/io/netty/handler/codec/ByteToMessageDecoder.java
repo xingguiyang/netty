@@ -77,33 +77,30 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.内存复制
      */
-    public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
-        @Override
-        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-            if (!cumulation.isReadable() && in.isContiguous()) {
-                // If cumulation is empty and input buffer is contiguous, use it directly
-                cumulation.release();
-                return in;
+    public static final Cumulator MERGE_CUMULATOR = (alloc, cumulation, in) -> {
+        if (!cumulation.isReadable() && in.isContiguous()) {
+            // If cumulation is empty and input buffer is contiguous, use it directly
+            cumulation.release();
+            return in;
+        }
+        try {
+            final int required = in.readableBytes();
+            if (required > cumulation.maxWritableBytes() ||
+                    (required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1) ||
+                    cumulation.isReadOnly()) {
+                // Expand cumulation (by replacing it) under the following conditions:
+                // - cumulation cannot be resized to accommodate the additional data
+                // - cumulation can be expanded with a reallocation operation to accommodate but the buffer is
+                //   assumed to be shared (e.g. refCnt() > 1) and the reallocation may not be safe.
+                return expandCumulation(alloc, cumulation, in);
             }
-            try {
-                final int required = in.readableBytes();
-                if (required > cumulation.maxWritableBytes() ||
-                        (required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1) ||
-                        cumulation.isReadOnly()) {
-                    // Expand cumulation (by replacing it) under the following conditions:
-                    // - cumulation cannot be resized to accommodate the additional data
-                    // - cumulation can be expanded with a reallocation operation to accommodate but the buffer is
-                    //   assumed to be shared (e.g. refCnt() > 1) and the reallocation may not be safe.
-                    return expandCumulation(alloc, cumulation, in);
-                }
-                cumulation.writeBytes(in, in.readerIndex(), required);
-                in.readerIndex(in.writerIndex());
-                return cumulation;
-            } finally {
-                // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
-                // for whatever release (for example because of OutOfMemoryError)
-                in.release();
-            }
+            cumulation.writeBytes(in, in.readerIndex(), required);
+            in.readerIndex(in.writerIndex());
+            return cumulation;
+        } finally {
+            // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
+            // for whatever release (for example because of OutOfMemoryError)
+            in.release();
         }
     };
 
@@ -114,38 +111,36 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
      * 由于子类实现不尽相同，不能确定说非内存复制效率就比内存复制高，所以默认还是更加通用的内存复制
      */
-    public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
-        @Override
-        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-            if (!cumulation.isReadable()) {
-                cumulation.release();
-                return in;
-            }
-            CompositeByteBuf composite = null;
-            try {
-                // 创建 composite bytebuf，如果已经创建过了，就不用再创建
-                if (cumulation instanceof CompositeByteBuf && cumulation.refCnt() == 1) {
-                    composite = (CompositeByteBuf) cumulation;
-                    // Writer index must equal capacity if we are going to "write"
-                    // new components to the end
-                    if (composite.writerIndex() != composite.capacity()) {
-                        composite.capacity(composite.writerIndex());
-                    }
-                } else {
-                    composite = alloc.compositeBuffer(Integer.MAX_VALUE).addFlattenedComponents(true, cumulation);
+    public static final Cumulator COMPOSITE_CUMULATOR = (alloc, cumulation, in) -> {
+        if (!cumulation.isReadable()) {
+            cumulation.release();
+            return in;
+        }
+        CompositeByteBuf composite = null;
+        try {
+            // 创建 composite bytebuf，如果已经创建过了，就不用再创建
+            if (cumulation instanceof CompositeByteBuf && cumulation.refCnt() == 1) {
+                composite = (CompositeByteBuf) cumulation;
+                // Writer index must equal capacity if we are going to "write"
+                // new components to the end
+                if (composite.writerIndex() != composite.capacity()) {
+                    composite.capacity(composite.writerIndex());
                 }
-                // 避免内存复制
-                composite.addFlattenedComponents(true, in);
-                in = null;
-                return composite;
-            } finally {
-                if (in != null) {
-                    // We must release if the ownership was not transferred as otherwise it may produce a leak
-                    in.release();
-                    // Also release any new buffer allocated if we're not returning it
-                    if (composite != null && composite != cumulation) {
-                        composite.release();
-                    }
+            } else {
+                // 逻辑组合代替实际复制
+                composite = alloc.compositeBuffer(Integer.MAX_VALUE).addFlattenedComponents(true, cumulation);
+            }
+            // 避免内存复制
+            composite.addFlattenedComponents(true, in);
+            in = null;
+            return composite;
+        } finally {
+            if (in != null) {
+                // We must release if the ownership was not transferred as otherwise it may produce a leak
+                in.release();
+                // Also release any new buffer allocated if we're not returning it
+                if (composite != null && composite != cumulation) {
+                    composite.release();
                 }
             }
         }

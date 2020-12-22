@@ -86,7 +86,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private volatile boolean interrupted;
 
     private final CountDownLatch threadLock = new CountDownLatch(1);
-    private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+    private final Set<Runnable> shutdownHooks = new LinkedHashSet<>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
     private final RejectedExecutionHandler rejectedExecutionHandler;

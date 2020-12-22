@@ -162,6 +162,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     protected abstract ByteBuffer newInternalNioBuffer(T memory);
 
+    // 归还对象到内存池中，pipeline 的 tail 会调用至此
     @Override
     protected final void deallocate() {
         if (handle >= 0) {

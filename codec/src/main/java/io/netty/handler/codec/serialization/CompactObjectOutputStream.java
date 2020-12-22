@@ -31,6 +31,7 @@ class CompactObjectOutputStream extends ObjectOutputStream {
 
     @Override
     protected void writeStreamHeader() throws IOException {
+        // 比JDK 少个 writeShort(STREAM_MAGIC); 魔数
         writeByte(STREAM_VERSION);
     }
 
@@ -42,7 +43,9 @@ class CompactObjectOutputStream extends ObjectOutputStream {
             write(TYPE_FAT_DESCRIPTOR);
             super.writeClassDescriptor(desc);
         } else {
+            // 比 JDK 少很多元信息
             write(TYPE_THIN_DESCRIPTOR);
+            // 但也写了类的名字，在反序列化时（反射）会用到
             writeUTF(desc.getName());
         }
     }

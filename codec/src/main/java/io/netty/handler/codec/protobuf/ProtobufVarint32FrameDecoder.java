@@ -36,6 +36,7 @@ import java.util.List;
  * | 0xAC02 |  (300 bytes)  |      |  (300 bytes)  |
  * +--------+---------------+      +---------------+
  * </pre>
+ * Varint = 长度字段的长度可变: 值越小的数字使用越少的字节数
  *
  * @see CodedInputStream
  * @see CodedInputByteBufferNano

@@ -39,10 +39,14 @@ public class WorldClockClientInitializer extends ChannelInitializer<SocketChanne
             p.addLast(sslCtx.newHandler(ch.alloc(), WorldClockClient.HOST, WorldClockClient.PORT));
         }
 
+        // 一次解码器得到 ByteBuf
         p.addLast(new ProtobufVarint32FrameDecoder());
+        // 二次解码器得到用户数据
         p.addLast(new ProtobufDecoder(WorldClockProtocol.LocalTimes.getDefaultInstance()));
 
+        // 处理粘包半包问题
         p.addLast(new ProtobufVarint32LengthFieldPrepender());
+        // 得到字节数组，方便存储和传输
         p.addLast(new ProtobufEncoder());
 
         p.addLast(new WorldClockClientHandler());

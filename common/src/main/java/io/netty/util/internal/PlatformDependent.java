@@ -124,11 +124,8 @@ public final class PlatformDependent {
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
-    private static final Cleaner NOOP = new Cleaner() {
-        @Override
-        public void freeDirectBuffer(ByteBuffer buffer) {
-            // NOOP
-        }
+    private static final Cleaner NOOP = buffer -> {
+        // NOOP
     };
 
     static {
@@ -197,7 +194,12 @@ public final class PlatformDependent {
             CLEANER = NOOP;
         }
 
-        // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
+       /**
+         * 如果可以使用Cleaner释放direct buffers，则默认情况下，应首选direct buffers。
+         * 使用堆外内存有俩条件：
+         *  1.有 cleaner 方法去释放堆外内存
+         *  2.io.netty.noPreferDirect不能设置为 true(设为 true 即为使用堆内内存)
+         */
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
                                   && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         if (logger.isDebugEnabled()) {
@@ -436,7 +438,7 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link LongCounter} implementation for the current platform.
+     * 为当前平台创建新的最快的{@link LongCounter}实现
      */
     public static LongCounter newLongCounter() {
         if (javaVersion() >= 8) {
@@ -944,8 +946,8 @@ public final class PlatformDependent {
         }
 
         static <T> Queue<T> newMpscQueue() {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
-                                                : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<>(MPSC_CHUNK_SIZE)
+                                                : new MpscUnboundedAtomicArrayQueue<>(MPSC_CHUNK_SIZE);
         }
     }
 

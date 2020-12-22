@@ -24,8 +24,7 @@ public interface ByteBufAllocator {
     ByteBufAllocator DEFAULT = ByteBufUtil.DEFAULT_ALLOCATOR;
 
     /**
-     * Allocate a {@link ByteBuf}. If it is a direct or heap buffer
-     * depends on the actual implementation.
+     * 分配ByteBuf,是direct还是heap buffer取决于实际实现
      */
     ByteBuf buffer();
 
