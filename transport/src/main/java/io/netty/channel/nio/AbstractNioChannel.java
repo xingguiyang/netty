@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.logging.InternalLogger;
@@ -377,6 +378,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
+                // 将当前的 ServerSocketChannel 注册到给定的 selector(在 NioEventLoop 中绑定的)
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;
             } catch (CancelledKeyException e) {
@@ -410,7 +412,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         readPending = true;
 
         final int interestOps = selectionKey.interestOps();
+        // 若之前没有监听 readInterestOp，则监听 readInterestOp
         if ((interestOps & readInterestOp) == 0) {
+            // NioServerSocketChannel: readInterestOp = OP_ACCEPT = 1<<4 =16
+            logger.debug("interest ops: " + readInterestOp);
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

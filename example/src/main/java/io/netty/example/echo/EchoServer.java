@@ -82,7 +82,7 @@ public final class EchoServer {
                         }
                     });
 
-            // 启动 server.
+            // 启动 server. 启动本身是个异步过程，我们需要显式sync阻塞直到启动成功再继续执行
             ChannelFuture f = b.bind(PORT).sync();
 
             // 等待直至 server socket 关闭

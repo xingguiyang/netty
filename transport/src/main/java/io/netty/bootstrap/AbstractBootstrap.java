@@ -241,7 +241,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     /**
-     * Create a new {@link Channel} and bind it.
+     * 创建一个新Channel并绑定到它
      */
     public ChannelFuture bind(int inetPort) {
         return bind(new InetSocketAddress(inetPort));
@@ -270,35 +270,35 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        // 可见这是个异步过程
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
             return regFuture;
         }
 
+        // 因为是在 NioEventLoop 中执行注册的, regFuture不一定已完成
         if (regFuture.isDone()) {
-            // At this point we know that the registration was complete and successful.
+            // 至此，我们知道注册已完成且成功
             ChannelPromise promise = channel.newPromise();
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
         } else {
-            // Registration future is almost always fulfilled already, but just in case it's not.
+            // 至此,regFuture 几乎总是已完成,但还是以防万一没完成
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
-            regFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
-                        // IllegalStateException once we try to access the EventLoop of the Channel.
-                        promise.setFailure(cause);
-                    } else {
-                        // Registration was successful, so set the correct executor to use.
-                        // See https://github.com/netty/netty/issues/2586
-                        promise.registered();
+            // 等着 register 完成来通知了再执行绑定
+            regFuture.addListener((ChannelFutureListener) future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                    // IllegalStateException once we try to access the EventLoop of the Channel.
+                    promise.setFailure(cause);
+                } else {
+                    // Registration was successful, so set the correct executor to use.
+                    // See https://github.com/netty/netty/issues/2586
+                    promise.registered();
 
-                        doBind0(regFuture, channel, localAddress, promise);
-                    }
+                    doBind0(regFuture, channel, localAddress, promise);
                 }
             });
             return promise;
@@ -308,7 +308,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            // 泛型+反射+工厂创建出所需的 channel
             channel = channelFactory.newChannel();
+            // 创建完 channel 后再单独初始化之
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
@@ -320,7 +322,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
-        // 开始 register
+        // 开始注册
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {

@@ -140,8 +140,14 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         synchronized (childOptions) {
             currentChildOptions = childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);
         }
+        // 这些属性都是为初始化 SocketChannel
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
 
+        /**
+         * ChannelInitializer 是个适配器，用于初始化handler再添加到ChannelPipeline中
+         * 负责添加一个ServerBootstrapAcceptor handler（负责接收客户端连接创建连接后，初始化该连接）
+         * 添加完后即完成自己的工作，还会自觉地移除自己
+         */
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) {

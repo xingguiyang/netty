@@ -468,12 +468,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 register0(promise);
             } else {
                 try {
-                    eventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            register0(promise);
-                        }
-                    });
+                    eventLoop.execute(() -> register0(promise));
                 } catch (Throwable t) {
                     logger.warn(
                             "Force-closing a channel whose registration task was not accepted by an event loop: {}",
@@ -554,13 +549,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // 绑定后，才开始激活
             if (!wasActive && isActive()) {
-                invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        pipeline.fireChannelActive();
-                    }
-                });
+                invokeLater(pipeline::fireChannelActive);
             }
 
             safeSetSuccess(promise);
@@ -1070,9 +1061,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected abstract SocketAddress remoteAddress0();
 
     /**
-     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
-     *
-     * Sub-classes may override this method
+     * Is called after the Channel is registered with its EventLoop as part of the register process.
+     * 在 Channel 使用EventLoop注册后，作为注册过程的一部分，调用此方法
+     * 子类可能重写此方法
      */
     protected void doRegister() throws Exception {
         // NOOP
