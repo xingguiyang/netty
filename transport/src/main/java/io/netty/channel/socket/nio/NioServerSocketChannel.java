@@ -151,7 +151,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         try {
             if (ch != null) {
+                // 将创建出的NioSocketChannel加入结果 list 中
                 buf.add(new NioSocketChannel(this, ch));
+                // 创建了一个连接
                 return 1;
             }
         } catch (Throwable t) {

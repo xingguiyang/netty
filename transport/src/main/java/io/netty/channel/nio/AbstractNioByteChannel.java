@@ -147,7 +147,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean close = false;
             try {
                 do {
+                    // 预估尽可能分配合适的大小
                     byteBuf = allocHandle.allocate(allocator);
+                    // 读并且记录读了多少，若读满了，下次 continue 时就直接扩容
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
@@ -163,11 +165,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                     allocHandle.incMessagesRead(1);
                     readPending = false;
+                    // pipeline 上执行，业务逻辑的处理就在这（如果读了 16 次，每次都会走这里 fire 出去）
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
                 } while (allocHandle.continueReading());
-
+                // 记录这次读事件总共读了多少数据，计算下次分配大小
                 allocHandle.readComplete();
+                // 相当于完成本次读事件的处理（即使读了 16 次，也是对应一个读事件的处理）
                 pipeline.fireChannelReadComplete();
 
                 if (close) {
@@ -287,7 +291,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     protected final void incompleteWrite(boolean setOpWrite) {
-        // Did not write completely.
+        // 没有写完
         if (setOpWrite) {
             setOpWrite();
         } else {
@@ -295,9 +299,11 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             // use our write quantum. In this case we no longer want to set the write OP because the socket is still
             // writable (as far as we know). We will find out next time we attempt to write if the socket is writable
             // and set the write OP if necessary.
+            // 我们可能已经设置了写OP，由于 socket 可写，它被NIO唤醒，然后使用我们的写范围。在这种情况下，我们不再想要设置写操作，
+            // 因为 socket 仍然是可写的（据我们所知）。我们将在下次尝试写 socket 是否可写时进行查找，并在必要时设置写OP。
             clearOpWrite();
 
-            // Schedule flush again later so other tasks can be picked up in the meantime
+            // Schedule稍后再次flush，以便在此期间可以执行其他task
             eventLoop().execute(flushTask);
         }
     }
@@ -332,6 +338,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
         final int interestOps = key.interestOps();
         if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+            // 注册 OP_WRITE 事件
             key.interestOps(interestOps | SelectionKey.OP_WRITE);
         }
     }

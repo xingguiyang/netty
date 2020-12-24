@@ -174,6 +174,7 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
+        // 判断待发送的数据 size 是否高于高水位线
         if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
             setUnwritable(invokeLater);
         }
@@ -236,7 +237,7 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
-     * Notify the {@link ChannelPromise} of the current message about writing progress.
+     * 通知 ChannelPromise 当前有关写入进度的消息。
      */
     public void progress(long amount) {
         Entry e = flushedEntry;
@@ -352,6 +353,7 @@ public final class ChannelOutboundBuffer {
                 }
                 remove();
             } else { // readableBytes > writtenBytes
+                // 还未写完
                 if (writtenBytes != 0) {
                     buf.readerIndex(readerIndex + (int) writtenBytes);
                     progress(writtenBytes);

@@ -80,7 +80,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                             closed = true;
                             break;
                         }
-
+                        // 记录创建的次数
                         allocHandle.incMessagesRead(localRead);
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
@@ -90,6 +90,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 int size = readBuf.size();
                 for (int i = 0; i < size; i ++) {
                     readPending = false;
+                    // 向后传播
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
                 readBuf.clear();
@@ -98,7 +99,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
                 if (exception != null) {
                     closed = closeOnReadError(exception);
-
+                    // 向后传播
                     pipeline.fireExceptionCaught(exception);
                 }
 

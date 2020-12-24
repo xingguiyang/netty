@@ -88,6 +88,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final boolean ordered;
+    // 用于判定是否有执行 pipeline 操作的资格,在 handler outbound 到 pipeline 时通过反射计算出,而非实时计算
     private final int executionMask;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
@@ -783,6 +784,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
         final AbstractChannelHandlerContext next = findContextOutbound(flush ?
                 (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
+        // 引用计数用的，用于检测内存泄漏
         final Object m = pipeline.touch(msg, next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {

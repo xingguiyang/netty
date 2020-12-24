@@ -23,6 +23,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
+ * 自适应数据大小的分配器
  * The {@link RecvByteBufAllocator} that automatically increases and
  * decreases the predicted buffer size on feed back.
  * <p>

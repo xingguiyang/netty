@@ -412,10 +412,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         readPending = true;
 
         final int interestOps = selectionKey.interestOps();
-        // 若之前没有监听 readInterestOp，则监听 readInterestOp
+        // 若之前没有监听 readInterestOp，则现在监听 readInterestOp      OP_READ = 1
         if ((interestOps & readInterestOp) == 0) {
             // NioServerSocketChannel: readInterestOp = OP_ACCEPT = 1<<4 =16
-            logger.debug("interest ops: " + readInterestOp);
+            logger.info("interest ops: " + readInterestOp);
             selectionKey.interestOps(interestOps | readInterestOp);
         }
     }

@@ -577,6 +577,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void processSelectedKeys() {
         if (selectedKeys != null) {
+            // 不用 JDK 的 selector.selectedKeys，性能更好（%1-2%），垃圾回收更少
             processSelectedKeysOptimized();
         } else {
             processSelectedKeysPlain(selector.selectedKeys());
@@ -652,6 +653,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // NioEventLoop＃processSelectedKeysOptimized中的循环边界可以更精确地定义，因为我们知道基础数组的实际大小
             selectedKeys.keys[i] = null;
 
+            // attachment 就是 NioServerSocketChannel
             final Object a = k.attachment();
 
             if (a instanceof AbstractNioChannel) {
@@ -710,14 +712,15 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 unsafe.finishConnect();
             }
 
-            // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
+            // 首先处理 OP_WRITE,因为我们可写一些排队的缓冲区,从而释放内存
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
+                // 调用 forceFlush,一旦无剩余可写内容,它也将清除 OP_WRITE
+                // 可见，注册 OP_WRITE 事件，要执行的就是 flush 操作.
                 ch.unsafe().forceFlush();
             }
 
-            // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
-            // to a spin loop
+            // 还要校验 readOps 为0以解决可能的JDK bug,否则可能导致 spin loop
+            // 处理读请求（断开连接）或接入连接
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
                 unsafe.read();
             }

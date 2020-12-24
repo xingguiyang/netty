@@ -495,11 +495,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                 // user may already fire events through the pipeline in the ChannelFutureListener.
                 pipeline.invokeHandlerAddedIfNeeded();
-
+                // 创建连接和服务启动过程不同，所以这里会继续执行
                 safeSetSuccess(promise);
                 pipeline.fireChannelRegistered();
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
+                // serverSocket的注册不会走下面的 if，serverSocket 接收连接创建的 socket 可以走进来，因为 accept 连接建立好了后就是 active
+                // 这不像服务启动过程那样还需要 bind
                 if (isActive()) {
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
@@ -834,12 +836,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBeginRead();
             } catch (final Exception e) {
-                invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        pipeline.fireExceptionCaught(e);
-                    }
-                });
+                invokeLater(() -> pipeline.fireExceptionCaught(e));
                 close(voidPromise());
             }
         }
@@ -849,6 +846,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            // 判断 channel 是否已经关闭
             if (outboundBuffer == null) {
                 // If the outboundBuffer is null we know the channel was closed and so
                 // need to fail the future right away. If it is not null the handling of the rest
